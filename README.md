@@ -58,5 +58,47 @@ From the repository root, run the tests with simulated Alpaca responses and a
 command-line check for missing credentials.
 
 ```sh
-python3 -m unittest discover -s tests -v
+python3 -m unittest discover -s tests -p test_check_alpaca.py -v
+```
+
+## Phase 2 · Local Parquet cache
+
+From the repository root, install the pinned dependency in a virtual environment.
+
+```zsh
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+```
+
+With the same Alpaca environment variables as Phase 1, run the updater from
+the repository root. Add `--live` if using live-account keys.
+
+```zsh
+.venv/bin/python update_data.py
+```
+
+The same command backfills and refreshes `data/daily_bars.parquet`. Each run
+fetches all six symbols from 2016 and replaces the snapshot after validating
+it. Full refreshes capture late corrections and historical split restatements.
+The calendar determines expected dates, including holidays and early closes.
+A session enters the cache once its scheduled close is at least 15 minutes old.
+If a request fails or a symbol has missing, unexpected or duplicate sessions,
+the updater exits with an error and preserves the existing snapshot. Rerun
+once the provider has supplied the missing or corrected data.
+
+Each row includes the ticker, New York session date, source bar timestamp in
+UTC, and split-adjusted OHLCV. The JSON report is also stored in the Parquet
+schema metadata under `stock_prediction`. It records source, calendar, feed,
+adjustment, query bounds, observation times, and first and last session.
+The cache is a snapshot of what Alpaca returned on that run. Keep a copy of
+any snapshot you need to reproduce after the provider revises the data.
+
+Run both phases' offline tests with the virtual environment. For live
+verification, run the updater twice and check that each report lists six
+symbols, the expected last eligible session, and a row count equal to six
+times the session count. A second run during the same eligibility window
+should produce the same row count.
+
+```zsh
+.venv/bin/python -m unittest discover -s tests -v
 ```
