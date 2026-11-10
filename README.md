@@ -102,3 +102,45 @@ should produce the same row count.
 ```zsh
 .venv/bin/python -m unittest discover -s tests -v
 ```
+
+## Phase 3 · Features, labels and baselines
+
+Refresh the cache before a current forecast. The report itself reads only the
+local Parquet snapshot and requires no API credentials.
+
+```zsh
+.venv/bin/python baseline_report.py
+.venv/bin/python -m unittest discover -s tests -v
+```
+
+For trading session **t**, the earliest forecast cutoff is its scheduled US
+market close plus 15 minutes (normally 4:15 p.m. New York time). Issue the
+forecast once the validated SIP bars for that session have arrived. The Phase 2
+cache determines the eligible sessions, including early closes. Dates and
+windows count trading sessions. The features use split-adjusted bars through
+**t** inclusive.
+
+| Feature | Calculation |
+| --- | --- |
+| Stock returns | Close at t divided by close one or five sessions earlier, minus one |
+| Stock volatility | Population standard deviation of the latest 20 one-session returns, including the return ending at t |
+| Relative volume | Volume at t divided by mean volume over the previous 20 sessions, missing if that mean is zero |
+| SPY returns | The same one- and five-session returns for the benchmark |
+
+The first 20 trading sessions warm up the features. Only the fields listed in
+`FEATURES` are model inputs. The label is 1 when the next trading session's
+split-adjusted close exceeds the close at t, and 0 for a flat or lower close.
+The last row for each stock has no observed label and is excluded from scores.
+
+The always-up baseline predicts direction 1, and its accuracy is the share of
+observed outcomes that went up. For probabilities, each stock uses its own
+expanding fraction of up outcomes, including the move from the previous close
+to t and all earlier moves in the cache. The next-session outcome enters the
+history only after that session's eligible bar arrives. The report scores the
+probabilities with mean squared error against binary outcomes (Brier score)
+and gives pooled and per-stock results.
+
+This is a chronological baseline check over the available history. The
+historical cache contains Alpaca's current revised bars, so it cannot reproduce
+the exact data values published at each historical cutoff. The final holdout
+and model evaluation are Phase 4 work.
