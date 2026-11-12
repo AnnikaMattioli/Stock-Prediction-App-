@@ -144,3 +144,38 @@ This is a chronological baseline check over the available history. The
 historical cache contains Alpaca's current revised bars, so it cannot reproduce
 the exact data values published at each historical cutoff. The final holdout
 and model evaluation are Phase 4 work.
+
+## Phase 4 · Logistic regression and held-out evaluation
+
+Install the updated requirements and evaluate the local cache.
+
+```zsh
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python evaluate_model.py
+.venv/bin/python -m unittest discover -s tests -v
+```
+
+One pooled logistic regression uses the six Phase 3 features for all five
+stocks. Each fit uses a pipeline of median imputation, standard scaling and
+L2-regularized logistic regression (C = 1). The imputer and scaler learn
+their statistics on the training rows for that fit.
+
+Validation uses three consecutive 126-session forecast blocks, each fitted
+once on expanding history. All stocks on a date stay together. At a block's
+first after-close forecast cutoff, training includes only earlier forecasts
+whose labels resolve by that cutoff. This includes the outcome resolved by the
+first session's close for the previous session's forecast.
+
+The final test is fixed to forecast sessions from 7 November 2025 through
+9 November 2026, the last 252 labelled sessions in the Phase 2 verification
+snapshot. One model fit at the first test forecast cutoff supplies all test
+probabilities. The report includes the fit cutoffs, date ranges and the latest
+training label dates. The model specification and 0.5 direction threshold
+are fixed for this evaluation. Historical up-rate probabilities still update
+using outcomes observable as of each forecast date.
+
+The report compares accuracy and Brier score on the same forecast rows for
+all three methods, pooled and by stock. Direction is up at probability
+0.5 or above. For probability scoring, always-up means probability 1.
+Use a preserved Parquet snapshot to reproduce the same data values after
+Alpaca revises its bars.
