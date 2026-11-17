@@ -20,8 +20,11 @@ FEATURES = (
 )
 
 
-def load_bars(path):
-    table = pq.ParquetFile(path).read(columns=["symbol", "session", "close", "volume"])
+def load_bars(path, *, include_open=False):
+    columns = ["symbol", "session", "close", "volume"]
+    if include_open:
+        columns.append("open")
+    table = pq.ParquetFile(path).read(columns=columns)
     metadata = json.loads(table.schema.metadata[b"stock_prediction"])
     if (
         metadata["schema_version"] != 1

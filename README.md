@@ -179,3 +179,37 @@ all three methods, pooled and by stock. Direction is up at probability
 0.5 or above. For probability scoring, always-up means probability 1.
 Use a preserved Parquet snapshot to reproduce the same data values after
 Alpaca revises its bars.
+
+## Phase 5 · Open-to-close backtest
+
+Run the backtest on the same local snapshot and fixed Phase 4 forecast splits.
+
+```zsh
+.venv/bin/python backtest.py
+.venv/bin/python -m unittest discover -s tests -v
+```
+
+Each after-close forecast for session t can trigger a long trade at the next
+exchange session's open. The position exits at that same session's close.
+Gross trade return is next close divided by next open, minus one. The model's
+label still compares the next close with the forecast session's close.
+
+The portfolio allocates up to one fifth of opening equity per qualifying stock,
+including entry costs. Unused allocations stay in cash, and the portfolio
+holds cash overnight. The simulation charges an assumed 5 basis points per
+side on traded notional. Daily turnover is the sum of buy and sell notionals
+divided by equity before trading. Drawdown is the largest decline from a prior
+peak in net equity measured at session closes, starting from initial equity.
+
+Threshold selection uses only the three Phase 4 walk-forward validation
+blocks. It maximizes compounded net return over the always-invested rule
+(threshold zero), thresholds from 0.50 through 0.60 in 0.01 increments,
+and cash (a null threshold in the report). Exact return ties favor lower
+turnover, then cash if still tied. The chosen rule is fixed for the held-out test. The report also
+shows the always-invested rule on the same dates as a trading benchmark.
+
+The backtest uses SIP daily opens and closes as execution price proxies.
+Alpaca supports market-on-open and market-on-close orders routed to the
+primary exchange's auctions, where actual prices and fills can differ.
+The simulation assumes full fills, fractional sizing, and a flat cost rate
+in place of an execution model. [Alpaca order documentation](https://docs.alpaca.markets/us/docs/orders-at-alpaca)
