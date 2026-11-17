@@ -78,6 +78,10 @@ def select_threshold(validation_days):
 
 def backtest(sessions, bars):
     validation, (test, _) = evaluate(list(build_rows(sessions, bars)))
+    return simulate_evaluation(validation, test, sessions, bars)
+
+
+def simulate_evaluation(validation, test, sessions, bars):
     validation_rows = [row for fold, _ in validation for row in fold]
     validation_days = list(execution_sessions(validation_rows, sessions, bars))
     threshold, candidates = select_threshold(validation_days)

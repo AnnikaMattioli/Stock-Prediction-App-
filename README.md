@@ -213,3 +213,40 @@ Alpaca supports market-on-open and market-on-close orders routed to the
 primary exchange's auctions, where actual prices and fills can differ.
 The simulation assumes full fills, fractional sizing, and a flat cost rate
 in place of an execution model. [Alpaca order documentation](https://docs.alpaca.markets/us/docs/orders-at-alpaca)
+
+## Phase 6 · Portfolio dashboard
+
+The dashboard uses the local Parquet snapshot. Run the Phase 2 updater first
+to create or refresh it. From the project root:
+
+```zsh
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python -m streamlit run app.py
+```
+
+The five probabilities use logistic regression fitted at the most recent
+cached session, using only labels that resolve by that session. SPY is a
+feature input. The app shows the forecast session and when the data was
+received. Select a stock to see its last 252 sessions of split-adjusted closes
+and its historical held-out classification scores. The trading simulation
+uses the Phase 5 validation-selected rule.
+
+After refreshing the Parquet file, select **Reload local snapshot** to update
+the dashboard. The dashboard reads local files and does not need Alpaca keys.
+You can set `STOCK_CACHE_PATH` to use a preserved snapshot.
+
+Run the unit tests and browser checks from the project root. Playwright starts
+a local Streamlit server and uses a deterministic synthetic cache.
+
+```zsh
+.venv/bin/python -m pip install -r requirements-test.txt
+.venv/bin/python -m playwright install chromium
+.venv/bin/python -m unittest discover -s tests -v
+.venv/bin/python -m unittest discover -s tests/browser -v
+```
+
+In the verified November 2026 snapshot, held-out logistic regression reached
+51.90% directional accuracy and a 0.25027 Brier score. The historical up-rate
+baseline reached 52.46% and 0.24987. The validation-selected 54% trading rule
+returned −6.05% after assumed costs on the held-out execution dates. The
+portfolio demo shows these results alongside the latest model estimates.
